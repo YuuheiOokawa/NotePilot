@@ -85,7 +85,7 @@ export function summarizeRevenues(entries: RevenueEntry[], now: Date): RevenueSu
   }
 
   const monthly = months.map((m) => monthlyMap.get(m)!);
-  const topArticles = [...articleMap.values()]
+  const topArticles = Array.from(articleMap.values())
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
 

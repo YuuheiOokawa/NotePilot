@@ -9,6 +9,8 @@ import type {
   SalesPlanRequest,
   SeriesPlanItem,
   SeriesPlanRequest,
+  SnsPromoRequest,
+  SnsPromoVariant,
   ThemeRequest,
   ThemeSuggestion,
 } from "../types";
@@ -100,6 +102,26 @@ export class AnthropicProvider implements AIProvider {
 以下のJSON配列のみを出力してください:
 [{"seriesNumber": 1, "title": "記事タイトル", "description": "内容の説明", "role": "free", "suggestedPrice": null}]`;
     return this.completeJson<SeriesPlanItem[]>(system, user);
+  }
+
+  async generateSnsPromo(req: SnsPromoRequest): Promise<SnsPromoVariant[]> {
+    const system =
+      "あなたはSNSマーケティングの専門家です。誇大表現を避け、誠実で共感を得る文章を書きます。必ず指定されたJSON形式のみで回答してください。";
+    const user = `以下のnote記事のSNS宣伝文（X向け・140字目安）を3パターン作成してください。
+タイトル: ${req.title}
+導入文: ${req.lead}
+種別: ${req.articleType === "paid" ? `有料記事${req.price ? `（¥${req.price}）` : ""}` : "無料記事"}
+ハッシュタグ候補: ${req.hashtags || "なし"}
+記事URL: ${req.noteUrl || "未投稿（URLは含めない）"}
+
+ルール:
+- 「絶対」「必ず稼げる」などの誇大表現は使わない
+- 3パターンは切り口を変える（共感型 / 問いかけ型 / 価値訴求型 など）
+- 記事URLがある場合は文末に含める。ハッシュタグは1〜2個まで
+
+以下のJSON配列のみを出力してください:
+[{"label": "共感型", "text": "宣伝文"}]`;
+    return this.completeJson<SnsPromoVariant[]>(system, user);
   }
 
   async reviewArticle(req: QualityReviewRequest): Promise<QualityReview> {

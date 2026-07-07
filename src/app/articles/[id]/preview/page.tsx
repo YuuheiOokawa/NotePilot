@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Header from "@/components/Header";
 import CopyButton from "@/components/CopyButton";
 import StatusBadge from "@/components/StatusBadge";
+import { toast } from "@/components/Toast";
 
 interface Section {
   heading: string;
@@ -30,10 +31,17 @@ function sectionText(sections: Section[]): string {
   return sections.map((s) => `${s.heading}\n\n${s.content}`).join("\n\n\n");
 }
 
+interface SnsVariant {
+  label: string;
+  text: string;
+}
+
 export default function PreviewPage() {
   const { id } = useParams<{ id: string }>();
   const [article, setArticle] = useState<Article | null>(null);
   const [noteUrl, setNoteUrl] = useState("");
+  const [snsVariants, setSnsVariants] = useState<SnsVariant[]>([]);
+  const [generatingSns, setGeneratingSns] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/articles/${id}`);
@@ -46,6 +54,25 @@ export default function PreviewPage() {
       .then((r) => r.json())
       .then((s) => setNoteUrl(s?.noteAccountUrl ?? ""));
   }, [load]);
+
+  const generateSns = async () => {
+    setGeneratingSns(true);
+    try {
+      const res = await fetch("/api/generate/sns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articleId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error ?? "SNS宣伝文の生成に失敗しました", "error");
+        return;
+      }
+      setSnsVariants(data.variants);
+    } finally {
+      setGeneratingSns(false);
+    }
+  };
 
   // コピー実行時、approved なら copied に自動記録する（F-06-3）
   const recordCopy = async () => {
@@ -159,6 +186,39 @@ export default function PreviewPage() {
             </pre>
           </div>
         )}
+
+        {/* SNS宣伝文の生成 */}
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-gray-500">SNS宣伝文をAIで生成</h2>
+            <button
+              className="rounded-lg border border-note px-3 py-1.5 text-xs font-bold text-note-dark active:bg-note/10"
+              onClick={generateSns}
+              disabled={generatingSns}
+            >
+              {generatingSns ? "生成中..." : snsVariants.length > 0 ? "⚡ 再生成" : "⚡ 3パターン生成"}
+            </button>
+          </div>
+          {snsVariants.length === 0 ? (
+            <p className="text-[10px] text-gray-400">
+              共感型・問いかけ型など切り口の違う宣伝文を3パターン提案します（投稿は手動です）
+            </p>
+          ) : (
+            snsVariants.map((v) => (
+              <div key={v.label} className="space-y-1 rounded-lg bg-gray-50 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="rounded-full bg-note/10 px-2 py-0.5 text-[10px] font-bold text-note-dark">
+                    {v.label}
+                  </span>
+                  <CopyButton text={v.text} label="コピー" />
+                </div>
+                <pre className="whitespace-pre-wrap break-words font-sans text-xs text-gray-700">
+                  {v.text}
+                </pre>
+              </div>
+            ))
+          )}
+        </div>
 
         {/* 全文一括コピー */}
         <div className="card space-y-2">
