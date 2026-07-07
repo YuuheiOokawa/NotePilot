@@ -32,16 +32,17 @@ describe("schedule: 投稿頻度管理（1時間に最大3投稿）", () => {
   });
 
   it("hourKey: 同じ時間帯なら同じキー、別の時間帯なら別のキー", () => {
-    const a = new Date(2026, 6, 7, 10, 5); // 2026-07-07 10:05
-    const b = new Date(2026, 6, 7, 10, 59);
-    const c = new Date(2026, 6, 7, 11, 0);
+    // JST 2026-07-07 10:05 など（UTC+9時間なのでUTCでは1:05）
+    const a = new Date(Date.UTC(2026, 6, 7, 1, 5));
+    const b = new Date(Date.UTC(2026, 6, 7, 1, 59));
+    const c = new Date(Date.UTC(2026, 6, 7, 2, 0));
     expect(hourKey(a)).toBe("2026-07-07T10");
     expect(hourKey(a)).toBe(hourKey(b));
     expect(hourKey(a)).not.toBe(hourKey(c));
   });
 
   it("hourKey: 1桁の月・日・時をゼロ埋めする", () => {
-    const d = new Date(2026, 0, 5, 9, 0); // 2026-01-05 09:00
+    const d = new Date(Date.UTC(2026, 0, 5, 0, 0)); // JST 2026-01-05 09:00
     expect(hourKey(d)).toBe("2026-01-05T09");
   });
 

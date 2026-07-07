@@ -61,6 +61,22 @@ export interface SalesPlan {
   promoText: string;
 }
 
+// ---- SNS宣伝文 ----
+
+export interface SnsPromoRequest {
+  title: string;
+  lead: string;
+  articleType: "free" | "paid";
+  price?: number | null;
+  hashtags?: string;
+  noteUrl?: string | null; // 投稿済みの場合は記事URLを文末に含める
+}
+
+export interface SnsPromoVariant {
+  label: string; // 例: "共感型" / "問いかけ型" / "価値訴求型"
+  text: string; // X(Twitter)にそのまま貼れる長さ（140字目安）
+}
+
 // ---- シリーズ（テーマ別連続記事） ----
 
 export type SeriesRole = "free" | "paid" | "summary" | "promo";
