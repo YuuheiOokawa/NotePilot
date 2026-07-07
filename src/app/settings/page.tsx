@@ -9,6 +9,7 @@ interface Setting {
   tone: string;
   aiProvider: string;
   aiModel: string;
+  noteAccountUrl: string;
 }
 
 export default function SettingsPage() {
@@ -55,6 +56,32 @@ export default function SettingsPage() {
     <>
       <Header title="設定" backHref="/" />
       <main className="space-y-4 p-4">
+        <div className="card space-y-3">
+          <h2 className="text-xs font-bold text-gray-500">noteアカウント連携</h2>
+          <div>
+            <label className="label">自分のnoteプロフィールURL</label>
+            <input
+              className="input"
+              placeholder="https://note.com/xxxx"
+              value={setting.noteAccountUrl}
+              onChange={(e) => setSetting({ ...setting, noteAccountUrl: e.target.value })}
+            />
+          </div>
+          {setting.noteAccountUrl && (
+            <a
+              href={setting.noteAccountUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-xl border border-note py-2.5 text-center text-xs font-bold text-note-dark active:bg-note/10"
+            >
+              📝 自分のnoteページを開く
+            </a>
+          )}
+          <p className="text-[10px] text-gray-400">
+            ※ 保存するのは公開プロフィールURLのみです。noteのログインID・パスワードは入力・保存しません（自動ログイン・自動投稿は行いません）。
+          </p>
+        </div>
+
         <div className="card space-y-3">
           <h2 className="text-xs font-bold text-gray-500">プロフィール（AI生成に反映されます）</h2>
           <div>

@@ -274,6 +274,8 @@ model Setting {
   tone       String   @default("")
   aiProvider String   @default("mock") @map("ai_provider")
   aiModel    String   @default("claude-opus-4-8") @map("ai_model")
+  // 自分のnoteアカウントの公開プロフィールURL（ログイン情報は保存しない）
+  noteAccountUrl String @default("") @map("note_account_url")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])

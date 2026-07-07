@@ -9,16 +9,19 @@ import { STATUS_LABELS } from "@/lib/workflow";
 export default function HomePage() {
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [revenue, setRevenue] = useState<{ totalAmount: number; totalCount: number } | null>(null);
+  const [noteUrl, setNoteUrl] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/articles").then((r) => r.json()),
       fetch("/api/revenues").then((r) => r.json()),
+      fetch("/api/settings").then((r) => r.json()),
     ])
-      .then(([a, r]) => {
+      .then(([a, r, s]) => {
         setArticles(a);
         setRevenue(r);
+        setNoteUrl(s?.noteAccountUrl ?? "");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -31,6 +34,19 @@ export default function HomePage() {
     <>
       <Header title="Note Auto Creator" />
       <main className="space-y-4 p-4">
+        {/* 自分のnoteページへ */}
+        {noteUrl && (
+          <a
+            href={noteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between rounded-2xl bg-note px-4 py-3 text-white active:bg-note-dark"
+          >
+            <span className="text-sm font-bold">📝 自分のnoteページを開く</span>
+            <span className="text-xs opacity-80">{noteUrl.replace("https://", "")} →</span>
+          </a>
+        )}
+
         {/* クイックアクション */}
         <div className="grid grid-cols-2 gap-3">
           <Link href="/ideas" className="card block text-center active:bg-gray-50">
