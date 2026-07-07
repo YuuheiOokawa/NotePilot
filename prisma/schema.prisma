@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ArticleType {
+  free
+  paid
+}
+
+enum ArticleStatus {
+  idea
+  draft
+  review
+  approved
+  copied
+  posted
+  archived
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String   @default("me")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  articles NoteArticle[]
+  ideas    ArticleIdea[]
+  aiLogs   AiGenerationLog[]
+  setting  Setting?
+
+  @@map("users")
+}
+
+model NoteArticle {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  ideaId        String?       @map("idea_id")
+  title         String
+  articleType   ArticleType   @map("article_type")
+  status        ArticleStatus @default(draft)
+  lead          String        @default("")
+  summary       String        @default("")
+  cta           String        @default("")
+  hashtags      String        @default("")
+  thumbnailText String        @default("") @map("thumbnail_text")
+
+  // 販売設定（有料記事）
+  price         Int?
+  salesTitle    String? @map("sales_title")
+  freeScopeNote String? @map("free_scope_note")
+  paidValueNote String? @map("paid_value_note")
+  targetReader  String? @map("target_reader")
+  promoText     String? @map("promo_text")
+
+  // 将来のnote投稿連携用（予約フィールド）
+  noteUrl    String?   @map("note_url")
+  notePostId String?   @map("note_post_id")
+  postedAt   DateTime? @map("posted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user             User              @relation(fields: [userId], references: [id])
+  idea             ArticleIdea?      @relation(fields: [ideaId], references: [id])
+  sections         ArticleSection[]
+  approvalRequests ApprovalRequest[]
+  revenueLogs      RevenueLog[]
+
+  @@map("note_articles")
+}
+
+model ArticleIdea {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  title         String
+  description   String      @default("")
+  category      String      @default("")
+  suggestedType ArticleType @default(free) @map("suggested_type")
+  used          Boolean     @default(false)
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  user     User          @relation(fields: [userId], references: [id])
+  articles NoteArticle[]
+
+  @@map("article_ideas")
+}
+
+model ArticleSection {
+  id         String   @id @default(uuid())
+  articleId  String   @map("article_id")
+  orderIndex Int      @map("order_index")
+  heading    String
+  content    String
+  isPaid     Boolean  @default(false) @map("is_paid")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  article NoteArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("article_sections")
+}
+
+model ApprovalRequest {
+  id          String         @id @default(uuid())
+  articleId   String         @map("article_id")
+  status      ApprovalStatus @default(pending)
+  comment     String?
+  requestedAt DateTime       @default(now()) @map("requested_at")
+  resolvedAt  DateTime?      @map("resolved_at")
+
+  article NoteArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("approval_requests")
+}
+
+model RevenueLog {
+  id        String   @id @default(uuid())
+  articleId String   @map("article_id")
+  date      DateTime
+  count     Int      @default(1)
+  amount    Int
+  memo      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  article NoteArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("revenue_logs")
+}
+
+model AiGenerationLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  articleId String?  @map("article_id")
+  kind      String
+  provider  String
+  model     String
+  prompt    String
+  response  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("ai_generation_logs")
+}
+
+model Setting {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  profile    String   @default("")
+  genres     String   @default("")
+  tone       String   @default("")
+  aiProvider String   @default("mock") @map("ai_provider")
+  aiModel    String   @default("claude-opus-4-8") @map("ai_model")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("settings")
+}
