@@ -3,27 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "cross-env NODE_EXTRA_CA_CERTS=./ca-bundle.pem next dev -p 3210",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3210",
     "lint": "next lint",
     "test": "vitest run",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:init": "node scripts/apply-init.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
+    "@neondatabase/serverless": "^0.10.4",
+    "@prisma/adapter-neon": "^5.22.0",
     "@prisma/client": "^5.22.0",
     "next": "^14.2.5",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.19",
+    "cross-env": "^10.1.0",
     "postcss": "^8.4.39",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.6",

@@ -40,10 +40,12 @@ cp .env.example .env
 # (Neonダッシュボード > Connect > Connection string)
 
 npx prisma db push   # スキーマをDBに反映
-npm run dev          # http://localhost:3000
+npm run dev          # http://localhost:3210 （ポート3210を使用）
 ```
 
-> 💡 `prisma db push` がネットワーク制限などで実行できない場合は、**`prisma/init.sql` の内容を Neon の SQL Editor に貼り付けて実行**しても同じテーブルが作成できます。
+> 💡 `prisma db push` がネットワーク制限（5432ポート遮断・TLS傍受）で実行できない場合は、`npm run db:init`（Neonサーバーレスドライバ/443ポート経由）を実行するか、**`prisma/init.sql` を Neon の SQL Editor に貼り付けて実行**してください。
+>
+> 💡 DB接続はNeonサーバーレスドライバ（WebSocket/443）を使用しているため、プロキシ環境でも動作します。プロキシがTLSを傍受する環境では、信頼済みCAをPEMで書き出して `NODE_EXTRA_CA_CERTS` に指定してください（`npm run dev` はプロジェクト直下の `ca-bundle.pem` を自動参照します）。
 
 ### Vercelにデプロイする場合
 
