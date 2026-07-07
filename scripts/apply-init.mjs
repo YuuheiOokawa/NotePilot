@@ -18,13 +18,15 @@ if (!process.env.DATABASE_URL) {
     if (m) process.env.DATABASE_URL = m[1];
   } catch {}
 }
-if (!process.env.DATABASE_URL) {
+const databaseUrl =
+  process.env.DATABASE_URL || process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL;
+if (!databaseUrl) {
   console.error("DATABASE_URL が設定されていません（.env を確認してください）");
   process.exit(1);
 }
 
 neonConfig.webSocketConstructor = ws;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({ connectionString: databaseUrl });
 const sql = readFileSync(join(root, "prisma", "init.sql"), "utf8");
 
 const client = await pool.connect();

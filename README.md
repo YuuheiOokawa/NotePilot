@@ -58,17 +58,19 @@ npm run dev          # http://localhost:3210 （ポート3210を使用）
 >
 > 💡 DB接続はNeonサーバーレスドライバ（WebSocket/443）を使用しているため、プロキシ環境でも動作します。プロキシがTLSを傍受する環境では、信頼済みCAをPEMで書き出して `NODE_EXTRA_CA_CERTS` に指定してください（`npm run dev` はプロジェクト直下の `ca-bundle.pem` を自動参照します）。
 
-### Vercelにデプロイする場合
+### Vercelにデプロイする場合（ローカル環境は不要）
 
 1. Vercelで本リポジトリをImport（Framework: Next.js が自動検出される）
-2. **Settings > Environment Variables に `DATABASE_URL`（Neonの接続文字列）を設定**してからDeploy
-3. スキーマ反映はローカルから一度 `npx prisma db push` を実行（.envにNeonのURLを設定した状態で）
+2. プロジェクトの **Storage → Create Database → Neon** を追加（`DATABASE_URL` が自動設定される）
+   - 既にNeonのDBがある場合は Settings > Environment Variables に `DATABASE_URL` を手動設定でもOK
+3. Deploy — **スキーマ（テーブル）は初回アクセス時に自動作成**されます。ローカルから `prisma db push` を実行する必要はありません
+4. セットアップ状態は `https://<デプロイURL>/api/health` で確認できます（DB未設定時はアプリ画面上部にも案内バナーが出ます）
 
 ### 環境変数
 
 | 変数 | 必須 | 説明 |
 |---|---|---|
-| `DATABASE_URL` | ✅ | PostgreSQL接続文字列（Neon: Connect > Connection string。`-pooler`付きURLの場合は末尾に`&pgbouncer=true`を追加） |
+| `DATABASE_URL` | ✅ | PostgreSQL接続文字列（Neon: Connect > Connection string。`-pooler`付きURLの場合は末尾に`&pgbouncer=true`を追加）。未設定の場合は `POSTGRES_PRISMA_URL` → `POSTGRES_URL`（Vercel統合が設定する変数名）に自動フォールバック |
 | `AI_PROVIDER` | - | `mock`（既定・APIキー不要）/ `anthropic` |
 | `ANTHROPIC_API_KEY` | - | `AI_PROVIDER=anthropic` の場合に必要 |
 | `ANTHROPIC_MODEL` | - | 既定: `claude-opus-4-8` |
