@@ -6,3 +6,5 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 ca-bundle.pem
+.note-profile/
+poster-logs/
