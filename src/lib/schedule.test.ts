@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { canScheduleInHour, hourKey, MAX_POSTS_PER_HOUR, remainingSlots } from "./schedule";
+import {
+  canScheduleInHour,
+  findOpenSlots,
+  hourKey,
+  jstSlotDate,
+  MAX_POSTS_PER_HOUR,
+  remainingSlots,
+} from "./schedule";
 
 describe("schedule: 投稿頻度管理（1時間に最大3投稿）", () => {
   it("上限は3件", () => {
@@ -36,5 +43,41 @@ describe("schedule: 投稿頻度管理（1時間に最大3投稿）", () => {
   it("hourKey: 1桁の月・日・時をゼロ埋めする", () => {
     const d = new Date(2026, 0, 5, 9, 0); // 2026-01-05 09:00
     expect(hourKey(d)).toBe("2026-01-05T09");
+  });
+
+  it("hourKey: サーバーのタイムゾーンに依存せずJST基準で計算する", () => {
+    // UTC 2026-07-07 01:05 = JST 2026-07-07 10:05
+    const utc = new Date(Date.UTC(2026, 6, 7, 1, 5));
+    expect(hourKey(utc)).toBe("2026-07-07T10");
+    // UTC 2026-07-07 23:00 = JST 2026-07-08 08:00（日付をまたぐ）
+    const crossDay = new Date(Date.UTC(2026, 6, 7, 23, 0));
+    expect(hourKey(crossDay)).toBe("2026-07-08T08");
+  });
+
+  it("jstSlotDate: 指定日数後のJST時刻を正しく作る", () => {
+    const base = new Date(Date.UTC(2026, 6, 7, 3, 0)); // JST 7/7 12:00
+    const slot = jstSlotDate(base, 1, 9); // 翌日 JST 9:00
+    expect(hourKey(slot)).toBe("2026-07-08T09");
+  });
+
+  it("findOpenSlots: 使用済み時間帯を避けて1時間1件で分散配置する", () => {
+    const base = new Date(Date.UTC(2026, 6, 7, 3, 0)); // JST 7/7 12:00
+    const used = new Set<string>(["2026-07-08T09"]); // 翌日9時は使用済み
+    const slots = findOpenSlots(base, 3, used);
+    expect(slots).toHaveLength(3);
+    const keys = slots.map(hourKey);
+    // 使用済みの9時は避けられる
+    expect(keys).not.toContain("2026-07-08T09");
+    // すべて異なる時間帯（1時間1件で分散）
+    expect(new Set(keys).size).toBe(3);
+    // 先頭は翌日の10時（9時がスキップされた次の枠）
+    expect(keys[0]).toBe("2026-07-08T10");
+  });
+
+  it("findOpenSlots: 大量でも複数日に分散して全件割当できる", () => {
+    const base = new Date(Date.UTC(2026, 6, 7, 3, 0));
+    const slots = findOpenSlots(base, 20, new Set());
+    expect(slots).toHaveLength(20);
+    expect(new Set(slots.map(hourKey)).size).toBe(20);
   });
 });

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getDefaultUser } from "@/lib/user";
 
 // 販売設計の「提案」のみを返す。保存はユーザーが編集・確認後にPATCHで行う（重要ルールR2）。
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "@/components/Toast";
 import { useParams } from "next/navigation";
 import Header from "@/components/Header";
 import type { SalesPlan } from "@/lib/types";
@@ -62,7 +63,7 @@ export default function SalesPage() {
       });
       setAdvice(plan.structureAdvice);
     } catch {
-      alert("提案の生成に失敗しました");
+      toast("提案の生成に失敗しました", "error");
     } finally {
       setGenerating(false);
     }

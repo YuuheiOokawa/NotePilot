@@ -5,6 +5,8 @@ import { getDefaultUser } from "@/lib/user";
 
 // テーマからシリーズ計画（10本前後・無料/有料/まとめ/宣伝の配分付き）を提案する。
 // ここでは提案のみで保存しない。保存はユーザー確認後に /api/theme-groups で行う。
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();

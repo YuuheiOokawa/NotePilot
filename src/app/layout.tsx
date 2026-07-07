@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import Toaster from "@/components/Toast";
 
 export const metadata: Metadata = {
   title: "Note Auto Creator",
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="mx-auto min-h-screen max-w-lg pb-20">{children}</div>
         <BottomNav />
+        <Toaster />
       </body>
     </html>
   );

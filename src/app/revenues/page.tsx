@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "@/components/Toast";
 import Header from "@/components/Header";
 
 interface RevenueLog {
@@ -47,7 +48,7 @@ export default function RevenuesPage() {
 
   const add = async () => {
     if (!articleId || !amount) {
-      alert("記事と金額を入力してください");
+      toast("記事と金額を入力してください", "error");
       return;
     }
     setSaving(true);

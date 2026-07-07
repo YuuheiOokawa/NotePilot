@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/components/Toast";
 import {
   CHECK_LABELS,
   READINESS_COLORS,
@@ -64,7 +65,7 @@ export default function ReviewPanel({
       if (!res.ok) throw new Error();
       onChanged();
     } catch {
-      alert("品質チェックに失敗しました");
+      toast("品質チェックに失敗しました", "error");
     } finally {
       setChecking(false);
     }

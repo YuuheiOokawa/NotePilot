@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
+import { toast } from "@/components/Toast";
 import { READINESS_COLORS, READINESS_LABELS, type ReadinessStatus } from "@/lib/review";
 
 interface QueueArticle {
@@ -65,12 +66,38 @@ function Row({ a }: { a: QueueArticle }) {
 
 export default function SchedulePage() {
   const [data, setData] = useState<ScheduleData | null>(null);
+  const [assigning, setAssigning] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch("/api/schedule")
       .then((r) => r.json())
       .then(setData);
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // 承認済み・予定未設定の記事に、空き時間帯を自動割当（ボタン1つ）
+  const autoAssign = async () => {
+    setAssigning(true);
+    try {
+      const res = await fetch("/api/schedule/auto-assign", { method: "POST" });
+      if (!res.ok) throw new Error();
+      const result = await res.json();
+      toast(
+        result.assigned > 0
+          ? `${result.assigned}件の記事に投稿予定を自動割当しました`
+          : "割当対象の記事がありません（承認済み・予定未設定の記事が対象）",
+        result.assigned > 0 ? "success" : "info",
+      );
+      load();
+    } catch {
+      toast("自動割当に失敗しました", "error");
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   if (!data) {
     return (
@@ -90,6 +117,15 @@ export default function SchedulePage() {
         <p className="text-[10px] text-gray-400">
           投稿頻度の目安は1時間に最大{data.maxPerHour}件です。予定は管理用であり、実際の投稿はあなたが承認後に手動で行います。
         </p>
+
+        {/* 自動割当（ボタン1つで投稿予定を組む） */}
+        {data.approvedUnscheduled.length > 0 && (
+          <button className="btn-primary" onClick={autoAssign} disabled={assigning}>
+            {assigning
+              ? "割当中..."
+              : `⚡ 承認済み${data.approvedUnscheduled.length}件に投稿予定を自動割当`}
+          </button>
+        )}
 
         {/* 時間帯の使用状況 */}
         {hours.length > 0 && (

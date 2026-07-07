@@ -6,8 +6,13 @@ import Header from "@/components/Header";
 import ArticleCard, { type ArticleSummary } from "@/components/ArticleCard";
 import { STATUS_LABELS } from "@/lib/workflow";
 
+type HomeArticle = ArticleSummary & {
+  publishReadinessStatus: "not_ready" | "needs_review" | "ready";
+  scheduledAt: string | null;
+};
+
 export default function HomePage() {
-  const [articles, setArticles] = useState<ArticleSummary[]>([]);
+  const [articles, setArticles] = useState<HomeArticle[]>([]);
   const [revenue, setRevenue] = useState<{ totalAmount: number; totalCount: number } | null>(null);
   const [noteUrl, setNoteUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,6 +34,35 @@ export default function HomePage() {
   const countBy = (status: string) => articles.filter((a) => a.status === status).length;
   const reviewCount = countBy("review");
   const recent = articles.filter((a) => a.status !== "archived").slice(0, 5);
+
+  // 「次にやること」: ユーザーがボタンを押すだけで運用できるよう、状態から次の一手を提示する
+  const nextActions: { href: string; label: string; sub: string; emphasis?: boolean }[] = [];
+  const readyDrafts = articles.filter(
+    (a) => a.status === "draft" && a.publishReadinessStatus === "ready",
+  ).length;
+  const needsFixDrafts = articles.filter(
+    (a) => a.status === "draft" && a.publishReadinessStatus !== "ready",
+  ).length;
+  const approvedUnscheduled = articles.filter(
+    (a) => (a.status === "approved" || a.status === "copied") && !a.scheduledAt,
+  ).length;
+  const copiedCount = countBy("copied");
+  const approvedCount = countBy("approved");
+
+  if (reviewCount > 0)
+    nextActions.push({ href: "/review", label: `承認待ちを確認する（${reviewCount}件）`, sub: "内容を見て承認 / 差し戻し", emphasis: true });
+  if (readyDrafts > 0)
+    nextActions.push({ href: "/articles?status=draft", label: `チェックOKの下書きを承認へ（${readyDrafts}件）`, sub: "記事を開いて「承認まで進める」を押すだけ", emphasis: true });
+  if (needsFixDrafts > 0)
+    nextActions.push({ href: "/articles?status=draft", label: `下書きの品質チェック・修正（${needsFixDrafts}件）`, sub: "記事を開いてチェック結果を解消" });
+  if (approvedCount > 0)
+    nextActions.push({ href: "/articles?status=approved", label: `承認済み記事をnoteへコピー（${approvedCount}件）`, sub: "プレビューからコピー→貼り付け" });
+  if (approvedUnscheduled > 0)
+    nextActions.push({ href: "/schedule", label: `投稿予定を自動割当（${approvedUnscheduled}件が未設定）`, sub: "投稿キューでボタン1つ" });
+  if (copiedCount > 0)
+    nextActions.push({ href: "/articles?status=copied", label: `投稿したら記録する（${copiedCount}件）`, sub: "投稿済みボタンを押すだけ" });
+  if (nextActions.length === 0 && !loading)
+    nextActions.push({ href: "/series", label: "新しいシリーズを企画する", sub: "テーマを入れてAIが10本企画", emphasis: true });
 
   return (
     <>
@@ -71,17 +105,27 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* 承認待ちアラート */}
-        {reviewCount > 0 && (
-          <Link
-            href="/review"
-            className="block rounded-2xl border border-orange-200 bg-orange-50 p-4 active:bg-orange-100"
-          >
-            <p className="text-sm font-bold text-orange-700">
-              ⏳ 確認待ちの記事が {reviewCount} 件あります
-            </p>
-            <p className="mt-0.5 text-xs text-orange-500">内容を確認して承認しましょう →</p>
-          </Link>
+        {/* 次にやること（ボタンを押すだけの運用ガイド） */}
+        {!loading && nextActions.length > 0 && (
+          <section className="card space-y-2">
+            <h2 className="text-xs font-bold text-gray-500">👉 次にやること</h2>
+            {nextActions.slice(0, 4).map((a) => (
+              <Link
+                key={a.label}
+                href={a.href}
+                className={`block rounded-xl px-3 py-2.5 active:opacity-80 ${
+                  a.emphasis
+                    ? "bg-note text-white"
+                    : "border border-gray-200 bg-gray-50 text-gray-700"
+                }`}
+              >
+                <p className="text-sm font-bold">{a.label}</p>
+                <p className={`text-[10px] ${a.emphasis ? "text-white/80" : "text-gray-400"}`}>
+                  {a.sub} →
+                </p>
+              </Link>
+            ))}
+          </section>
         )}
 
         {/* サマリ */}
