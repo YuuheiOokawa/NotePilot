@@ -28,18 +28,79 @@ enum ApprovalStatus {
   rejected
 }
 
+// シリーズ内での記事の役割（無料=読者獲得 / 有料=ノウハウ / まとめ=導線 / 宣伝=有料noteへの誘導）
+enum SeriesRole {
+  free
+  paid
+  summary
+  promo
+}
+
+enum CheckStatus {
+  not_checked
+  passed
+  issues_found
+}
+
+enum ClaimStatus {
+  unverified
+  verified
+  removed
+}
+
+// 投稿準備状態。未確認情報が残っている限り ready にはならない（重要ルール）
+enum ReadinessStatus {
+  not_ready
+  needs_review
+  ready
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String   @default("me")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  articles NoteArticle[]
-  ideas    ArticleIdea[]
-  aiLogs   AiGenerationLog[]
-  setting  Setting?
+  articles    NoteArticle[]
+  ideas       ArticleIdea[]
+  aiLogs      AiGenerationLog[]
+  setting     Setting?
+  themeGroups ThemeGroup[]
 
   @@map("users")
+}
+
+// テーマ別の記事シリーズ（1テーマ＝10本前後）
+model ThemeGroup {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user     User          @relation(fields: [userId], references: [id])
+  items    SeriesItem[]
+  articles NoteArticle[]
+
+  @@map("theme_groups")
+}
+
+// シリーズ計画の1項目。記事生成前は articleId が null
+model SeriesItem {
+  id             String     @id @default(uuid())
+  themeGroupId   String     @map("theme_group_id")
+  seriesNumber   Int        @map("series_number")
+  title          String
+  description    String     @default("")
+  role           SeriesRole @default(free)
+  suggestedPrice Int?       @map("suggested_price")
+  articleId      String?    @unique @map("article_id")
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  themeGroup ThemeGroup   @relation(fields: [themeGroupId], references: [id], onDelete: Cascade)
+  article    NoteArticle? @relation(fields: [articleId], references: [id])
+
+  @@map("series_items")
 }
 
 model NoteArticle {
@@ -63,6 +124,24 @@ model NoteArticle {
   targetReader  String? @map("target_reader")
   promoText     String? @map("promo_text")
 
+  // シリーズ管理
+  themeGroupId String?     @map("theme_group_id")
+  seriesNumber Int?        @map("series_number")
+  seriesRole   SeriesRole? @map("series_role")
+  isPaid       Boolean     @default(false) @map("is_paid")
+
+  // 投稿スケジュール管理（1時間3投稿まで。実投稿はユーザー承認後・手動）
+  scheduledAt        DateTime? @map("scheduled_at")
+  postFrequencyGroup String?   @map("post_frequency_group") // 例: "2026-07-07T10"（時間バケツ）
+
+  // 品質チェック・ファクトチェック
+  qualityScore           Int?            @map("quality_score")
+  typoCheckStatus        CheckStatus     @default(not_checked) @map("typo_check_status")
+  factCheckStatus        CheckStatus     @default(not_checked) @map("fact_check_status")
+  hasUnverifiedClaims    Boolean         @default(false) @map("has_unverified_claims")
+  reviewNotes            String          @default("") @map("review_notes")
+  publishReadinessStatus ReadinessStatus @default(not_ready) @map("publish_readiness_status")
+
   // 将来のnote投稿連携用（予約フィールド）
   noteUrl    String?   @map("note_url")
   notePostId String?   @map("note_post_id")
@@ -73,11 +152,44 @@ model NoteArticle {
 
   user             User              @relation(fields: [userId], references: [id])
   idea             ArticleIdea?      @relation(fields: [ideaId], references: [id])
+  themeGroup       ThemeGroup?       @relation(fields: [themeGroupId], references: [id])
+  seriesItem       SeriesItem?
   sections         ArticleSection[]
   approvalRequests ApprovalRequest[]
   revenueLogs      RevenueLog[]
+  factClaims       FactClaim[]
+  qualityChecks    QualityCheck[]
 
   @@map("note_articles")
+}
+
+// 要確認情報（ファクトチェック対象）。数値・法律・制度・試験・料金など
+model FactClaim {
+  id        String      @id @default(uuid())
+  articleId String      @map("article_id")
+  text      String
+  category  String      @default("")
+  reason    String      @default("")
+  status    ClaimStatus @default(unverified)
+  note      String      @default("")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  article NoteArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("fact_claims")
+}
+
+// 品質チェックの実行履歴（結果はJSONで保持）
+model QualityCheck {
+  id         String   @id @default(uuid())
+  articleId  String   @map("article_id")
+  score      Int
+  resultJson String   @map("result_json")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  article NoteArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("quality_checks")
 }
 
 model ArticleIdea {

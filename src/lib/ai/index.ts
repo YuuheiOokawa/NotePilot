@@ -1,8 +1,12 @@
 import type {
   ArticleRequest,
   GeneratedArticle,
+  QualityReview,
+  QualityReviewRequest,
   SalesPlan,
   SalesPlanRequest,
+  SeriesPlanItem,
+  SeriesPlanRequest,
   ThemeRequest,
   ThemeSuggestion,
 } from "../types";
@@ -14,6 +18,8 @@ export interface AIProvider {
   generateThemes(req: ThemeRequest): Promise<ThemeSuggestion[]>;
   generateArticle(req: ArticleRequest): Promise<GeneratedArticle>;
   generateSalesPlan(req: SalesPlanRequest): Promise<SalesPlan>;
+  generateSeriesPlan(req: SeriesPlanRequest): Promise<SeriesPlanItem[]>;
+  reviewArticle(req: QualityReviewRequest): Promise<QualityReview>;
 }
 
 let cached: AIProvider | null = null;

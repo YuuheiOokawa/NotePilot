@@ -9,6 +9,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       approvalRequests: { orderBy: { requestedAt: "desc" } },
       revenueLogs: { orderBy: { date: "desc" } },
       idea: true,
+      themeGroup: { select: { id: true, name: true } },
+      factClaims: { orderBy: { createdAt: "asc" } },
+      qualityChecks: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
   if (!article) {
@@ -39,6 +42,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     "targetReader",
     "promoText",
     "noteUrl",
+    "reviewNotes",
   ] as const;
   for (const f of fields) {
     if (f in body) data[f] = body[f];
@@ -46,10 +50,23 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if ("price" in body) data.price = body.price === null ? null : Number(body.price);
   if ("articleType" in body && (body.articleType === "free" || body.articleType === "paid")) {
     data.articleType = body.articleType;
+    data.isPaid = body.articleType === "paid";
   }
 
   const sections: { heading: string; content: string; isPaid: boolean }[] | undefined =
     body.sections;
+
+  // 本文・タイトル等の内容が変更されたら、品質チェック結果を無効化する
+  // （記事作成・修正後は必ず再チェックさせるための設計）
+  const contentChanged =
+    sections !== undefined ||
+    ["title", "lead", "summary", "cta"].some((f) => f in body);
+  if (contentChanged) {
+    data.typoCheckStatus = "not_checked";
+    data.factCheckStatus = "not_checked";
+    data.publishReadinessStatus = "not_ready";
+    data.qualityScore = null;
+  }
 
   const article = await prisma.$transaction(async (tx) => {
     if (sections) {
