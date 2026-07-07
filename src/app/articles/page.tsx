@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import ArticleCard, { type ArticleSummary } from "@/components/ArticleCard";
 import { STATUSES, STATUS_LABELS } from "@/lib/workflow";
 
-export default function ArticlesPage() {
+function ArticlesList() {
+  const searchParams = useSearchParams();
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
-  const [status, setStatus] = useState("");
-  const [type, setType] = useState("");
+  const [status, setStatus] = useState(searchParams.get("status") ?? "");
+  const [type, setType] = useState(searchParams.get("type") ?? "");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,8 +25,6 @@ export default function ArticlesPage() {
   }, [status, type]);
 
   return (
-    <>
-      <Header title="記事一覧" backHref="/" />
       <main className="space-y-3 p-4">
         <div className="flex gap-2">
           <select className="input flex-1" value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -54,6 +54,16 @@ export default function ArticlesPage() {
           </div>
         )}
       </main>
+  );
+}
+
+export default function ArticlesPage() {
+  return (
+    <>
+      <Header title="記事一覧" backHref="/" />
+      <Suspense>
+        <ArticlesList />
+      </Suspense>
     </>
   );
 }

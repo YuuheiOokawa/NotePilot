@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "@/components/Toast";
 import Link from "next/link";
 import Header from "@/components/Header";
 import type { ArticleSummary } from "@/components/ArticleCard";
@@ -42,7 +43,7 @@ export default function ReviewPage() {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      alert(body.error ?? "操作に失敗しました");
+      toast(body.error ?? "操作に失敗しました", "error");
     }
     load();
   };

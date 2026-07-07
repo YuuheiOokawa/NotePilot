@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
 import ReviewPanel, { type FactClaimData } from "@/components/ReviewPanel";
+import { toast } from "@/components/Toast";
 import { SERIES_ROLE_LABELS, type SeriesRole } from "@/lib/types";
 import type { CheckStatus, ReadinessStatus } from "@/lib/review";
 
@@ -103,13 +104,12 @@ export default function ArticleDetailPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      setMessage("保存しました");
+      toast("保存しました。内容を変更したので品質チェックの再実行が必要です", "info");
       await load();
     } catch {
-      setMessage("保存に失敗しました");
+      toast("保存に失敗しました", "error");
     } finally {
       setSaving(false);
-      setTimeout(() => setMessage(""), 2500);
     }
   };
 
@@ -121,10 +121,18 @@ export default function ArticleDetailPage() {
     });
     if (res.ok) {
       await load();
-    } else {
-      const body = await res.json().catch(() => ({}));
-      alert(body.error ?? "ステータス変更に失敗しました");
+      return true;
     }
+    const body = await res.json().catch(() => ({}));
+    toast(body.error ?? "ステータス変更に失敗しました", "error");
+    return false;
+  };
+
+  // 1タップで「確認に出す→承認」まで進める（承認はこのボタン＝ユーザー操作）
+  const quickApprove = async () => {
+    if (!confirm("この記事を承認しますか？（確認に出す→承認 を一括で行います）")) return;
+    if (!(await transition("review"))) return;
+    if (await transition("approved")) toast("承認しました。プレビューからコピーできます");
   };
 
   const markPosted = async () => {
@@ -162,9 +170,21 @@ export default function ArticleDetailPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
+            {article.status === "draft" && article.publishReadinessStatus === "ready" && (
+              <button
+                className="col-span-2 rounded-xl bg-green-600 py-3 text-sm font-bold text-white active:bg-green-700"
+                onClick={quickApprove}
+              >
+                ✅ 承認まで進める（チェックOK・1タップ）
+              </button>
+            )}
             {article.status === "draft" && (
               <button
-                className="col-span-2 rounded-xl bg-orange-500 py-3 text-sm font-bold text-white active:bg-orange-600"
+                className={`col-span-2 rounded-xl py-3 text-sm font-bold ${
+                  article.publishReadinessStatus === "ready"
+                    ? "border border-gray-300 text-gray-600 active:bg-gray-100"
+                    : "bg-orange-500 text-white active:bg-orange-600"
+                }`}
                 onClick={() => transition("review")}
               >
                 確認に出す（承認リクエスト）

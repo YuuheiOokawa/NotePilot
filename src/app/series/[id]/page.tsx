@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
+import { toast } from "@/components/Toast";
 import { SERIES_ROLE_LABELS, type SeriesRole } from "@/lib/types";
 import { READINESS_COLORS, READINESS_LABELS, type ReadinessStatus } from "@/lib/review";
 
@@ -43,6 +44,7 @@ export default function SeriesDetailPage() {
   const router = useRouter();
   const [group, setGroup] = useState<Group | null>(null);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/theme-groups/${id}`);
@@ -67,10 +69,36 @@ export default function SeriesDetailPage() {
       });
       if (!res.ok) throw new Error();
       await load();
+      toast("記事を生成し、品質チェックまで完了しました");
     } catch {
-      alert("記事の生成に失敗しました");
+      toast("記事の生成に失敗しました", "error");
     } finally {
       setGeneratingId(null);
+    }
+  };
+
+  // 一括生成: 残りの未生成項目を1件ずつサーバーに依頼し、全件完了まで自動で繰り返す
+  const generateAll = async () => {
+    if (!group) return;
+    const remaining = group.items.filter((i) => !i.articleId).length;
+    if (remaining === 0) return;
+    if (!confirm(`残り${remaining}本をまとめて生成します（品質チェック込み）。よろしいですか？`)) return;
+
+    setBulkProgress({ done: group.items.length - remaining, total: group.items.length });
+    try {
+      for (;;) {
+        const res = await fetch(`/api/theme-groups/${id}/generate-next`, { method: "POST" });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setBulkProgress({ done: data.done, total: data.total });
+        await load();
+        if (data.remaining <= 0) break;
+      }
+      toast("シリーズ全記事の生成が完了しました🎉");
+    } catch {
+      toast("一括生成の途中でエラーが発生しました。残りは再度ボタンで続行できます", "error");
+    } finally {
+      setBulkProgress(null);
     }
   };
 
@@ -104,6 +132,18 @@ export default function SeriesDetailPage() {
           <p className="mt-2 text-[10px] text-gray-400">
             無料記事は信頼獲得を、有料記事は具体的な手順・テンプレート・実体験を重視して作成しましょう。
           </p>
+
+          {generated < group.items.length && (
+            <button
+              className="btn-primary mt-3"
+              onClick={generateAll}
+              disabled={bulkProgress !== null || generatingId !== null}
+            >
+              {bulkProgress
+                ? `⏳ 生成中... ${bulkProgress.done}/${bulkProgress.total} 本完了`
+                : `⚡ 残り${group.items.length - generated}本をまとめて生成（チェック込み）`}
+            </button>
+          )}
         </div>
 
         <div className="space-y-2">

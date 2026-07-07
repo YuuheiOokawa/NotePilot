@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "@/components/Toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -47,7 +48,7 @@ export default function SeriesPage() {
       if (!res.ok) throw new Error();
       setPlan(await res.json());
     } catch {
-      alert("シリーズ計画の生成に失敗しました");
+      toast("シリーズ計画の生成に失敗しました", "error");
     } finally {
       setGenerating(false);
     }
@@ -69,7 +70,7 @@ export default function SeriesPage() {
       const group = await res.json();
       router.push(`/series/${group.id}`);
     } catch {
-      alert("保存に失敗しました");
+      toast("保存に失敗しました", "error");
       setSaving(false);
     }
   };

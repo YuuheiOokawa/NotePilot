@@ -96,10 +96,10 @@ function NewArticleForm() {
         {error && <p className="text-xs font-bold text-red-500">{error}</p>}
 
         <button className="btn-primary" onClick={generate} disabled={generating}>
-          {generating ? "AIが執筆中...（少々お待ちください）" : "AIに記事を生成してもらう"}
+          {generating ? "AIが執筆＆品質チェック中..." : "✨ AIに記事を生成してもらう（品質チェック込み）"}
         </button>
         <p className="text-center text-[10px] text-gray-400">
-          生成後は「下書き」として保存されます。投稿は必ずあなたの承認後です。
+          生成〜品質チェックまで自動で行い「下書き」として保存されます。投稿は必ずあなたの承認後です。
         </p>
       </div>
     </main>
