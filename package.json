@@ -11,7 +11,10 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
-    "db:init": "node scripts/apply-init.mjs"
+    "db:init": "node scripts/apply-init.mjs",
+    "poster": "cross-env NODE_EXTRA_CA_CERTS=./ca-bundle.pem node scripts/note-poster.mjs",
+    "poster:once": "cross-env NODE_EXTRA_CA_CERTS=./ca-bundle.pem node scripts/note-poster.mjs --once",
+    "poster:test": "cross-env NODE_EXTRA_CA_CERTS=./ca-bundle.pem node scripts/note-poster.mjs --once --draft-only"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
@@ -30,6 +33,7 @@
     "@types/ws": "^8.18.1",
     "autoprefixer": "^10.4.19",
     "cross-env": "^10.1.0",
+    "playwright": "^1.61.1",
     "postcss": "^8.4.39",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.6",
