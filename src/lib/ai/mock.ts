@@ -10,6 +10,8 @@ import type {
   SalesPlanRequest,
   SeriesPlanItem,
   SeriesPlanRequest,
+  SnsPromoRequest,
+  SnsPromoVariant,
   SuspectedClaim,
   ThemeRequest,
   ThemeSuggestion,
@@ -132,6 +134,30 @@ export class MockProvider implements AIProvider {
       { seriesNumber: 10, title: `${t}の有料noteに込めた内容を紹介します`, description: "有料記事の価値を伝える宣伝用記事。", role: "promo" },
     ];
     return plan.slice(0, req.count && req.count >= 4 ? req.count : 10);
+  }
+
+  // SNS宣伝文を3パターン生成する（X向け・140字目安）
+  async generateSnsPromo(req: SnsPromoRequest): Promise<SnsPromoVariant[]> {
+    const paid = req.articleType === "paid";
+    const priceNote = paid && req.price ? `（¥${req.price}）` : "";
+    const tags = (req.hashtags || "").split(/\s+/).filter(Boolean).slice(0, 2).join(" ");
+    const url = req.noteUrl ? `\n${req.noteUrl}` : "";
+    const suffix = `${tags ? `\n${tags}` : ""}${url}`;
+
+    return [
+      {
+        label: "共感型",
+        text: `「${req.title}」を書きました。\n同じことで悩んでいた過去の自分に向けて、実体験ベースでまとめています。${paid ? `\n無料部分だけでも読んでいってください👇${priceNote}` : "\nよかったら読んでみてください👇"}${suffix}`,
+      },
+      {
+        label: "問いかけ型",
+        text: `${req.title.replace(/[。｜|].*$/, "")}、気になりませんか？\n私が実際に経験して分かったことを1本のnoteにまとめました。${paid ? `\n具体的な手順は有料部分に全部書いています${priceNote}👇` : "\n答えはこちら👇"}${suffix}`,
+      },
+      {
+        label: "価値訴求型",
+        text: `✅実体験ベース\n✅きれいごと抜き\n✅明日から使える具体策\n\n「${req.title}」公開しました${priceNote}👇${suffix}`,
+      },
+    ];
   }
 
   // ルールベースの品質チェック。誇大表現・要確認情報などを機械的に検出する。
