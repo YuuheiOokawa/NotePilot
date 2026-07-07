@@ -7,6 +7,8 @@ import type {
   SalesPlanRequest,
   SeriesPlanItem,
   SeriesPlanRequest,
+  SnsPromoRequest,
+  SnsPromoVariant,
   ThemeRequest,
   ThemeSuggestion,
 } from "../types";
@@ -20,6 +22,7 @@ export interface AIProvider {
   generateSalesPlan(req: SalesPlanRequest): Promise<SalesPlan>;
   generateSeriesPlan(req: SeriesPlanRequest): Promise<SeriesPlanItem[]>;
   reviewArticle(req: QualityReviewRequest): Promise<QualityReview>;
+  generateSnsPromo(req: SnsPromoRequest): Promise<SnsPromoVariant[]>;
 }
 
 let cached: AIProvider | null = null;
