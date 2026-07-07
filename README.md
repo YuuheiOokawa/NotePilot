@@ -43,6 +43,8 @@ npx prisma db push   # スキーマをDBに反映
 npm run dev          # http://localhost:3000
 ```
 
+> 💡 `prisma db push` がネットワーク制限などで実行できない場合は、**`prisma/init.sql` の内容を Neon の SQL Editor に貼り付けて実行**しても同じテーブルが作成できます。
+
 ### Vercelにデプロイする場合
 
 1. Vercelで本リポジトリをImport（Framework: Next.js が自動検出される）
