@@ -43,6 +43,16 @@ export default function HomePage() {
             <div className="mt-1 text-sm font-bold">記事を作成</div>
             <div className="text-[10px] text-gray-400">AIが自動生成</div>
           </Link>
+          <Link href="/series" className="card block text-center active:bg-gray-50">
+            <div className="text-2xl">📚</div>
+            <div className="mt-1 text-sm font-bold">シリーズ</div>
+            <div className="text-[10px] text-gray-400">テーマ別に10本企画</div>
+          </Link>
+          <Link href="/schedule" className="card block text-center active:bg-gray-50">
+            <div className="text-2xl">📅</div>
+            <div className="mt-1 text-sm font-bold">投稿キュー</div>
+            <div className="text-[10px] text-gray-400">予定・承認待ち管理</div>
+          </Link>
         </div>
 
         {/* 承認待ちアラート */}

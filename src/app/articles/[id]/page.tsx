@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import StatusBadge from "@/components/StatusBadge";
+import ReviewPanel, { type FactClaimData } from "@/components/ReviewPanel";
+import { SERIES_ROLE_LABELS, type SeriesRole } from "@/lib/types";
+import type { CheckStatus, ReadinessStatus } from "@/lib/review";
 
 interface Section {
   heading: string;
@@ -34,6 +37,20 @@ interface Article {
   noteUrl: string | null;
   sections: Section[];
   approvalRequests: Approval[];
+  // シリーズ
+  themeGroup: { id: string; name: string } | null;
+  seriesNumber: number | null;
+  seriesRole: SeriesRole | null;
+  // 品質チェック・スケジュール
+  qualityScore: number | null;
+  typoCheckStatus: CheckStatus;
+  factCheckStatus: CheckStatus;
+  hasUnverifiedClaims: boolean;
+  publishReadinessStatus: ReadinessStatus;
+  reviewNotes: string;
+  scheduledAt: string | null;
+  factClaims: FactClaimData[];
+  qualityChecks: { id: string; score: number; resultJson: string; createdAt: string }[];
 }
 
 export default function ArticleDetailPage() {
@@ -156,7 +173,8 @@ export default function ArticleDetailPage() {
             {article.status === "review" && (
               <>
                 <button
-                  className="rounded-xl bg-green-600 py-3 text-sm font-bold text-white active:bg-green-700"
+                  className="rounded-xl bg-green-600 py-3 text-sm font-bold text-white active:bg-green-700 disabled:opacity-40"
+                  disabled={article.publishReadinessStatus !== "ready"}
                   onClick={() => confirm("この記事を承認しますか？投稿可能な状態になります。") && transition("approved")}
                 >
                   ✅ 承認する
@@ -167,6 +185,11 @@ export default function ArticleDetailPage() {
                 >
                   差し戻す
                 </button>
+                {article.publishReadinessStatus !== "ready" && (
+                  <p className="col-span-2 text-[10px] text-red-500">
+                    ⚠️ 品質チェックが「投稿準備OK」になるまで承認できません（未確認情報が残っている記事は投稿できません）。下の品質チェックを実行・解消してください。
+                  </p>
+                )}
               </>
             )}
             {(article.status === "approved" || article.status === "copied") && (
@@ -232,7 +255,20 @@ export default function ArticleDetailPage() {
           {article.noteUrl && (
             <p className="break-all text-[10px] text-gray-400">投稿URL: {article.noteUrl}</p>
           )}
+
+          {article.themeGroup && (
+            <Link
+              href={`/series/${article.themeGroup.id}`}
+              className="block rounded-xl bg-gray-50 p-3 text-[11px] text-gray-600 active:bg-gray-100"
+            >
+              📚 シリーズ「{article.themeGroup.name}」 第{article.seriesNumber}回
+              {article.seriesRole && `（${SERIES_ROLE_LABELS[article.seriesRole]}）`} →
+            </Link>
+          )}
         </div>
+
+        {/* 記事レビュー（品質チェック・ファクトチェック・要確認リスト・スケジュール） */}
+        <ReviewPanel article={article} onChanged={load} />
 
         {/* 本文編集 */}
         <div className="card space-y-3">

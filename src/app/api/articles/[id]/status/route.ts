@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canTransition, isStatus } from "@/lib/workflow";
+import { canApprove } from "@/lib/review";
 
 // ステータス遷移エンドポイント。
 // 遷移表（lib/workflow.ts）にない遷移は409で拒否する。
@@ -24,6 +25,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       { error: `「${from}」から「${to}」への遷移は許可されていません` },
       { status: 409 },
     );
+  }
+
+  // 承認ガード: 品質チェック未実施・未確認情報が残っている記事は承認（＝投稿可能な状態）にできない
+  if (to === "approved" && !canApprove(article.publishReadinessStatus, article.hasUnverifiedClaims)) {
+    const reason = article.hasUnverifiedClaims
+      ? "未確認情報（要確認リスト）が残っています。すべて確認済みにしてから承認してください。"
+      : "品質チェックが完了していないか、要修正項目が残っています。品質チェックを実行し、問題を解消してください。";
+    return NextResponse.json({ error: `承認できません: ${reason}` }, { status: 409 });
   }
 
   const updated = await prisma.$transaction(async (tx) => {

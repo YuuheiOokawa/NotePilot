@@ -4,9 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import type { ArticleSummary } from "@/components/ArticleCard";
+import { READINESS_COLORS, READINESS_LABELS, type ReadinessStatus } from "@/lib/review";
+
+type ReviewArticle = ArticleSummary & {
+  publishReadinessStatus: ReadinessStatus;
+  hasUnverifiedClaims: boolean;
+};
 
 export default function ReviewPage() {
-  const [articles, setArticles] = useState<ArticleSummary[]>([]);
+  const [articles, setArticles] = useState<ReviewArticle[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
@@ -66,13 +72,24 @@ export default function ReviewPage() {
                   >
                     {a.articleType === "paid" ? "有料" : "無料"}
                   </span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${READINESS_COLORS[a.publishReadinessStatus]}`}
+                  >
+                    {READINESS_LABELS[a.publishReadinessStatus]}
+                  </span>
                 </div>
                 <p className="text-sm font-bold">{a.title}</p>
                 <p className="mt-1 text-[10px] text-note-dark">内容を確認する →</p>
               </Link>
+              {a.publishReadinessStatus !== "ready" && (
+                <p className="text-[10px] text-red-500">
+                  ⚠️ 品質チェック未完了または未確認情報あり。記事詳細でチェックを完了させてください。
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  className="rounded-xl bg-green-600 py-2.5 text-sm font-bold text-white active:bg-green-700"
+                  className="rounded-xl bg-green-600 py-2.5 text-sm font-bold text-white active:bg-green-700 disabled:opacity-40"
+                  disabled={a.publishReadinessStatus !== "ready"}
                   onClick={() => act(a.id, "approved")}
                 >
                   ✅ 承認

@@ -26,18 +26,39 @@ export async function POST(req: Request) {
     };
     const generated = await ai.generateArticle(request);
 
+    // シリーズ項目からの生成の場合、シリーズ情報を記事に紐付ける
+    let seriesData: {
+      themeGroupId?: string;
+      seriesNumber?: number;
+      seriesRole?: "free" | "paid" | "summary" | "promo";
+    } = {};
+    let seriesItem = null;
+    if (body.seriesItemId) {
+      seriesItem = await prisma.seriesItem.findUnique({ where: { id: body.seriesItemId } });
+      if (seriesItem) {
+        seriesData = {
+          themeGroupId: seriesItem.themeGroupId,
+          seriesNumber: seriesItem.seriesNumber,
+          seriesRole: seriesItem.role,
+        };
+      }
+    }
+
     const article = await prisma.noteArticle.create({
       data: {
         userId: user.id,
         ideaId: body.ideaId || null,
         title: generated.title,
         articleType,
+        isPaid: articleType === "paid",
         status: "draft",
         lead: generated.lead,
         summary: generated.summary,
         cta: generated.cta,
         hashtags: generated.hashtags,
         thumbnailText: generated.thumbnailText,
+        price: seriesItem?.suggestedPrice ?? null,
+        ...seriesData,
         sections: {
           create: generated.sections.map((s, i) => ({
             orderIndex: i,
@@ -49,6 +70,13 @@ export async function POST(req: Request) {
       },
       include: { sections: { orderBy: { orderIndex: "asc" } } },
     });
+
+    if (seriesItem) {
+      await prisma.seriesItem.update({
+        where: { id: seriesItem.id },
+        data: { articleId: article.id },
+      });
+    }
 
     if (body.ideaId) {
       await prisma.articleIdea
