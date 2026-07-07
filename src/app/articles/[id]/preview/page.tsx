@@ -33,6 +33,7 @@ function sectionText(sections: Section[]): string {
 export default function PreviewPage() {
   const { id } = useParams<{ id: string }>();
   const [article, setArticle] = useState<Article | null>(null);
+  const [noteUrl, setNoteUrl] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/articles/${id}`);
@@ -41,6 +42,9 @@ export default function PreviewPage() {
 
   useEffect(() => {
     load();
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((s) => setNoteUrl(s?.noteAccountUrl ?? ""));
   }, [load]);
 
   // コピー実行時、approved なら copied に自動記録する（F-06-3）
@@ -157,13 +161,23 @@ export default function PreviewPage() {
         )}
 
         {/* 全文一括コピー */}
-        <div className="card">
+        <div className="card space-y-2">
           <CopyButton
             text={fullBody}
             label="📋 本文を全文コピー（無料＋有料）"
             onCopied={recordCopy}
             className="btn-primary"
           />
+          {noteUrl && (
+            <a
+              href={noteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary block"
+            >
+              📝 noteを開いて貼り付ける →
+            </a>
+          )}
         </div>
       </main>
     </>
