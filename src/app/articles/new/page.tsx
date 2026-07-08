@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 
@@ -15,7 +15,39 @@ function NewArticleForm() {
   const [tone, setTone] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const ideaId = searchParams.get("ideaId");
+
+  const importMdFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    setImportError("");
+    setImporting(true);
+    try {
+      const files = await Promise.all(
+        Array.from(fileList).map(async (f) => ({ name: f.name, content: await f.text() })),
+      );
+      const res = await fetch("/api/articles/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const imported = (data.articles ?? []).filter((a: { id?: string }) => a.id);
+      if (imported.length === 0) throw new Error();
+      if (imported.length === 1) {
+        router.push(`/articles/${imported[0].id}`);
+      } else {
+        router.push("/articles");
+      }
+    } catch {
+      setImportError("mdファイルの読み込みに失敗しました。もう一度お試しください。");
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const generate = async () => {
     if (!theme.trim()) {
@@ -100,6 +132,34 @@ function NewArticleForm() {
         </button>
         <p className="text-center text-[10px] text-gray-400">
           生成〜品質チェックまで自動で行い「下書き」として保存されます。投稿は必ずあなたの承認後です。
+        </p>
+      </div>
+
+      <div className="card space-y-3">
+        <div>
+          <label className="label">mdファイルから読み込む</label>
+          <p className="text-xs text-gray-500">
+            書き溜めたMarkdown記事を取り込んで、タイトル・導入文・本文・タグを自動入力します。複数ファイルの一括取り込みにも対応しています。
+          </p>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".md,.markdown,.txt"
+          multiple
+          className="hidden"
+          onChange={(e) => importMdFiles(e.target.files)}
+        />
+        {importError && <p className="text-xs font-bold text-red-500">{importError}</p>}
+        <button
+          className="w-full rounded-xl border border-note py-3 text-sm font-bold text-note-dark disabled:opacity-50"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importing}
+        >
+          {importing ? "読み込み＆品質チェック中..." : "📄 mdファイルを選択して取り込む"}
+        </button>
+        <p className="text-center text-[10px] text-gray-400">
+          「## タイトル」「## 導入文」「## 本文」形式のほか、一般的なMarkdownも取り込めます。【有料・◯円】表記や「---(ここから有料)---」の行から有料設定も自動判定します。
         </p>
       </div>
     </main>
