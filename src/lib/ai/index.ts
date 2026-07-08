@@ -1,5 +1,7 @@
 import type {
   ArticleRequest,
+  AutoFixRequest,
+  AutoFixResult,
   GeneratedArticle,
   QualityReview,
   QualityReviewRequest,
@@ -22,6 +24,7 @@ export interface AIProvider {
   generateSalesPlan(req: SalesPlanRequest): Promise<SalesPlan>;
   generateSeriesPlan(req: SeriesPlanRequest): Promise<SeriesPlanItem[]>;
   reviewArticle(req: QualityReviewRequest): Promise<QualityReview>;
+  fixArticle(req: AutoFixRequest): Promise<AutoFixResult>;
   generateSnsPromo(req: SnsPromoRequest): Promise<SnsPromoVariant[]>;
 }
 

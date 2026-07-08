@@ -41,6 +41,7 @@ export default function ReviewPanel({
   onChanged: () => void;
 }) {
   const [checking, setChecking] = useState(false);
+  const [fixing, setFixing] = useState(false);
   const [notes, setNotes] = useState(article.reviewNotes);
   const [savingNotes, setSavingNotes] = useState(false);
   const [scheduledAt, setScheduledAt] = useState(
@@ -68,6 +69,22 @@ export default function ReviewPanel({
       toast("品質チェックに失敗しました", "error");
     } finally {
       setChecking(false);
+    }
+  };
+
+  const runFix = async () => {
+    setFixing(true);
+    try {
+      const res = await fetch(`/api/articles/${article.id}/auto-fix`, { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error);
+      const count = Array.isArray(body.changeNotes) ? body.changeNotes.length : 0;
+      toast(`AI修正を適用し、再チェックしました(修正メモ${count}件)`, "success");
+      onChanged();
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : "自動修正に失敗しました", "error");
+    } finally {
+      setFixing(false);
     }
   };
 
@@ -115,6 +132,14 @@ export default function ReviewPanel({
 
   const activeClaims = article.factClaims.filter((c) => c.status !== "removed");
   const unverifiedCount = activeClaims.filter((c) => c.status === "unverified").length;
+
+  // AI自動修正の対象になる指摘数(要確認情報は含めない。ファクトの解消は必ずユーザーが行う)
+  const fixableCount = review
+    ? review.typoIssues.length +
+      review.grammarIssues.length +
+      review.expressionIssues.length +
+      review.duplicationIssues.length
+    : 0;
 
   return (
     <>
@@ -196,6 +221,17 @@ export default function ReviewPanel({
           )}
           {review.duplicationIssues.length > 0 && (
             <IssueList title="🔁 内容の重複" items={review.duplicationIssues} color="text-orange-600" />
+          )}
+
+          {fixableCount > 0 && (
+            <div className="space-y-1.5">
+              <button className="btn-secondary" onClick={runFix} disabled={fixing || checking}>
+                {fixing ? "AIが修正＆再チェック中..." : `🔧 指摘${fixableCount}件をAIに修正させる`}
+              </button>
+              <p className="text-[10px] text-gray-400">
+                ※ 修正対象は誤字脱字・文法・表現・重複のみです。要確認情報(ファクト)の解消と承認は、従来どおりあなたの操作が必要です。修正後は自動で品質チェックを再実行します。
+              </p>
+            </div>
           )}
 
           <div className="space-y-1 text-[11px]">
