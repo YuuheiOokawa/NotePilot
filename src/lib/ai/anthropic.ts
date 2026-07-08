@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { AIProvider } from "./index";
 import type {
   ArticleRequest,
+  AutoFixRequest,
+  AutoFixResult,
   GeneratedArticle,
   QualityReview,
   QualityReviewRequest,
@@ -122,6 +124,41 @@ export class AnthropicProvider implements AIProvider {
 以下のJSON配列のみを出力してください:
 [{"label": "共感型", "text": "宣伝文"}]`;
     return this.completeJson<SnsPromoVariant[]>(system, user);
+  }
+
+  async fixArticle(req: AutoFixRequest): Promise<AutoFixResult> {
+    const system = `あなたはnote記事の校閲者です。品質チェックで指摘された問題だけを最小限の修正で直します。必ず指定されたJSON形式のみで回答してください。
+ルール:
+- 修正するのは誤字脱字・文法ミス・不自然/誇大な表現・内容の重複のみ
+- 数値・料金・法律・制度などの事実情報は絶対に変更しない(事実確認はユーザーが行う)
+- セクションの数・順序・isPaidは絶対に変更しない。見出しは誤字がある場合のみ修正
+- 指摘と関係ない箇所は書き換えない。文体・内容・構成は維持する
+- changeNotesに「どこを・どう直したか」を1件ずつ日本語で記載する`;
+    const body = req.sections
+      .map((s, i) => `[セクション${i + 1}]${s.isPaid ? "【有料】" : "【無料】"}${s.heading}\n${s.content}`)
+      .join("\n\n");
+    const issueList = [
+      ...req.issues.typoIssues.map((s) => `誤字脱字: ${s}`),
+      ...req.issues.grammarIssues.map((s) => `文法: ${s}`),
+      ...req.issues.expressionIssues.map((s) => `表現: ${s}`),
+      ...req.issues.duplicationIssues.map((s) => `重複: ${s}`),
+    ].join("\n");
+    const user = `以下のnote記事について、品質チェックの指摘を修正してください。
+タイトル: ${req.title}
+種別: ${req.articleType === "paid" ? "有料記事" : "無料記事"}
+
+指摘一覧:
+${issueList}
+
+導入文: ${req.lead}
+本文:
+${body}
+まとめ: ${req.summary}
+
+セクション数は${req.sections.length}個のまま、元と同じ順序・同じisPaidで出力してください。
+以下のJSONのみを出力してください:
+{"lead": "修正後の導入文", "sections": [{"heading": "見出し", "content": "修正後の本文(改行は\\n)", "isPaid": false}], "summary": "修正後のまとめ", "changeNotes": ["修正内容の説明"]}`;
+    return this.completeJson<AutoFixResult>(system, user);
   }
 
   async reviewArticle(req: QualityReviewRequest): Promise<QualityReview> {
