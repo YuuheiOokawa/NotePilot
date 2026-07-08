@@ -3,6 +3,8 @@ import type {
 } from "./index";
 import type {
   ArticleRequest,
+  AutoFixRequest,
+  AutoFixResult,
   GeneratedArticle,
   QualityReview,
   QualityReviewRequest,
@@ -158,6 +160,73 @@ export class MockProvider implements AIProvider {
         text: `✅実体験ベース\n✅きれいごと抜き\n✅明日から使える具体策\n\n「${req.title}」公開しました${priceNote}👇${suffix}`,
       },
     ];
+  }
+
+  // ルールベースの自動修正。reviewArticleが検出する誤字・誇大表現を機械的に置換する。
+  // 事実情報(数値・料金・制度)には触れない。重複の解消は文脈判断が必要なため対象外。
+  async fixArticle(req: AutoFixRequest): Promise<AutoFixResult> {
+    const changeNotes: string[] = [];
+
+    // 誤字パターン(reviewArticleのtypoPatternsと対応)
+    const typoFixes: [RegExp, string, string][] = [
+      [/のの/g, "の", "助詞の重複「のの」を「の」に修正"],
+      [/がが/g, "が", "助詞の重複「がが」を「が」に修正"],
+      [/をを/g, "を", "助詞の重複「をを」を「を」に修正"],
+      [/です。です/g, "です", "文末の重複「です。です」を修正"],
+      [/ます。ます/g, "ます", "文末の重複「ます。ます」を修正"],
+      [/ {2,}/g, " ", "連続した半角スペースを1つに修正"],
+    ];
+
+    // 誇大表現の言い換え(reviewArticleのexaggerationPatternsと対応)。長い語句から先に置換する
+    const softenFixes: [string, string][] = [
+      ["誰でも簡単に稼げる", "初心者でも取り組みやすい"],
+      ["必ず稼げる", "収入につながる可能性がある"],
+      ["確実に稼げる", "収益が見込める"],
+      ["失敗しません", "失敗しにくくなります"],
+      ["保証します", "と考えています"],
+      ["間違いなく", "おそらく"],
+      ["絶対に", "できる限り"],
+      ["100%", "ほぼ"],
+    ];
+
+    const applied = new Set<string>();
+    const fix = (text: string): string => {
+      let result = text;
+      for (const [re, replacement, note] of typoFixes) {
+        re.lastIndex = 0;
+        if (re.test(result)) {
+          result = result.replace(re, replacement);
+          applied.add(note);
+        }
+      }
+      for (const [pattern, replacement] of softenFixes) {
+        if (result.includes(pattern)) {
+          result = result.split(pattern).join(replacement);
+          applied.add(`誇大表現「${pattern}」を「${replacement}」に言い換え`);
+        }
+      }
+      return result;
+    };
+
+    const lead = fix(req.lead);
+    const sections = req.sections.map((s) => ({
+      heading: fix(s.heading),
+      content: fix(s.content),
+      isPaid: s.isPaid, // 有料境界は変更しない
+    }));
+    const summary = fix(req.summary);
+
+    changeNotes.push(...Array.from(applied));
+    if (req.issues.duplicationIssues.length > 0) {
+      changeNotes.push(
+        "内容の重複は文脈の判断が必要なため自動修正していません。手動で調整してください。",
+      );
+    }
+    if (changeNotes.length === 0) {
+      changeNotes.push("自動修正できる箇所は見つかりませんでした。");
+    }
+
+    return { lead, sections, summary, changeNotes };
   }
 
   // ルールベースの品質チェック。誇大表現・要確認情報などを機械的に検出する。

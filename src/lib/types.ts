@@ -118,6 +118,30 @@ export interface SuspectedClaim {
   reason: string;
 }
 
+// ---- 自動修正(チェック指摘の反映) ----
+
+export interface AutoFixRequest {
+  title: string;
+  articleType: "free" | "paid";
+  lead: string;
+  sections: { heading: string; content: string; isPaid: boolean }[];
+  summary: string;
+  // 修正対象は文章表現の指摘のみ。claims(要確認情報)は含めない(事実確認はユーザーが行う)
+  issues: {
+    typoIssues: string[];
+    grammarIssues: string[];
+    expressionIssues: string[];
+    duplicationIssues: string[];
+  };
+}
+
+export interface AutoFixResult {
+  lead: string;
+  sections: { heading: string; content: string; isPaid: boolean }[];
+  summary: string;
+  changeNotes: string[]; // 何をどう修正したかの説明
+}
+
 export interface QualityReview {
   score: number; // 0-100
   typoIssues: string[];
