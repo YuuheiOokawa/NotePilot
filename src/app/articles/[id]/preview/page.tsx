@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import CopyButton from "@/components/CopyButton";
 import StatusBadge from "@/components/StatusBadge";
 import { toast } from "@/components/Toast";
+import { convertMarkdownTablesForNote } from "@/lib/noteFormat";
 
 interface Section {
   heading: string;
@@ -27,8 +28,12 @@ interface Article {
   sections: Section[];
 }
 
+// noteはMarkdownのテーブル記法(| a | b |)をサポートしないため、コピー用テキストを
+// 組み立てる際に箇条書き形式へ変換する(DB上の元原稿・編集画面の表示は変更しない)。
 function sectionText(sections: Section[]): string {
-  return sections.map((s) => `${s.heading}\n\n${s.content}`).join("\n\n\n");
+  return sections
+    .map((s) => `${s.heading}\n\n${convertMarkdownTablesForNote(s.content)}`)
+    .join("\n\n\n");
 }
 
 interface SnsVariant {
@@ -96,10 +101,10 @@ export default function PreviewPage() {
 
   const freeSections = article.sections.filter((s) => !s.isPaid);
   const paidSections = article.sections.filter((s) => s.isPaid);
-  const tail = `${article.summary}\n\n${article.cta}`;
+  const tail = `${convertMarkdownTablesForNote(article.summary)}\n\n${article.cta}`;
 
   const freeBody =
-    `${article.lead}\n\n\n${sectionText(freeSections)}` +
+    `${convertMarkdownTablesForNote(article.lead)}\n\n\n${sectionText(freeSections)}` +
     (paidSections.length === 0 ? `\n\n\n${tail}` : "");
   const paidBody = paidSections.length > 0 ? `${sectionText(paidSections)}\n\n\n${tail}` : "";
   const fullBody = paidSections.length > 0 ? `${freeBody}\n\n\n${paidBody}` : freeBody;
