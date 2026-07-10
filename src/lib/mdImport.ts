@@ -2,8 +2,10 @@ import type { GeneratedSection } from "./types";
 
 // Markdown記事の取り込みパーサー。
 // 2つの形式に対応する:
-// 1. 構造化形式: 「## タイトル」「## 導入文」「## 本文(### で小見出し)」「## まとめ」等の
-//    メタ見出しで構成されたmd(note記事の下書きテンプレート形式)
+// 1. 構造化形式: 「## タイトル」「## 導入文」「## 本文(### や #### で小見出し)」「## まとめ」等の
+//    メタ見出しで構成されたmd(note記事の下書きテンプレート形式)。
+//    本文配下の### (小見出し)・#### (有料テンプレ集の個々のプロンプト「T-01|タイトル」等)は
+//    それぞれ独立したセクションとして取り込む。
 // 2. 汎用形式: 「# タイトル」+「## 見出し」の一般的なmd
 // 有料境界は「---(ここから有料)---」のようなマーカー行、または見出しの【有料・◯円】表記から判定する。
 
@@ -63,7 +65,10 @@ const META_MAP: Record<string, MetaKey> = {
   有料ライン: "freeScope",
 };
 
-const HEADING_RE = /^(#{1,3})\s+(.+?)\s*$/;
+// H4(####)も見出しとして認識する。有料テンプレ集の個々のプロンプト
+// (「#### T-01|タイトル」「#### P-01|タイトル」等)を、本文中の埋め込みテキストではなく
+// 独立したセクションとして取り込むために必要。
+const HEADING_RE = /^(#{1,4})\s+(.+?)\s*$/;
 const PAID_MARKER_RE = /^[-=＝_*＊~〜ー–—\s(（)）]*ここから有料[-=＝_*＊~〜ー–—\s(（)）]*$/;
 const HR_RE = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/;
 
@@ -84,11 +89,13 @@ function blockText(block: RawBlock): string {
   return lines.join("\n").trim();
 }
 
-// H2ブロック直後に続くH3ブロック群を子として集める
+// H2ブロック直後に続くH3・H4ブロック群を子として集める。
+// H4(有料テンプレ集の個々のプロンプト等)もH3と同じ粒度でフラットに1セクションずつ扱う
+// (UI側は見出し+本文のカード表示のみのため、H3/H4の階層差を作る必要がない)。
 function collectChildren(blocks: RawBlock[], i: number): { children: RawBlock[]; next: number } {
   const children: RawBlock[] = [];
   let j = i + 1;
-  while (j < blocks.length && blocks[j].level === 3) {
+  while (j < blocks.length && blocks[j].level >= 3) {
     children.push(blocks[j]);
     j++;
   }
@@ -121,11 +128,23 @@ function stripTitleDecorations(text: string): string {
 export function parseMarkdownArticle(md: string, fileName?: string): ParsedMdArticle {
   const warnings: string[] = [];
 
-  // 行単位で走査してブロックに分割。有料マーカー行はフラグに変換して除去する
+  // 行単位で走査してブロックに分割。有料マーカー行はフラグに変換して除去する。
+  // フェンスコードブロック(```〜```)内は、シェル/Pythonコメント等の「# 〜」行を
+  // 見出しと誤認識しないよう、見出し判定の対象から除外する。
   const blocks: RawBlock[] = [];
   let current: RawBlock = { level: 0, heading: "", lines: [], isPaid: false };
   let paid = false;
+  let inFence = false;
   for (const line of md.split(/\r?\n/)) {
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      current.lines.push(line);
+      continue;
+    }
+    if (inFence) {
+      current.lines.push(line);
+      continue;
+    }
     if (line.includes("ここから有料") && PAID_MARKER_RE.test(line)) {
       paid = true;
       continue;
