@@ -164,6 +164,48 @@ describe("mdImport: 構造化形式(有料)", () => {
   });
 });
 
+describe("mdImport: 本文より前に置かれた目次の位置", () => {
+  // 「## 目次」は「## 本文」より前(導入文の直後)に置かれるのが通常の構成。
+  // 以前は「本文」配下のH3を全部処理してから他のH2を末尾にまとめて追加していたため、
+  // 目次が本文の途中〜末尾に押し出されてしまっていた(このテストはその回帰防止)。
+  const md = `# 第1回【無料】
+
+## タイトル
+目次の位置を確認する記事
+
+## 導入文
+導入文です。
+
+## 目次
+1. 結論
+2. まとめ
+
+## 本文
+
+### 結論
+
+結論の本文。
+
+### 次の見出し
+
+次の本文。
+
+## まとめ
+まとめの本文。
+`;
+  const parsed = parseMarkdownArticle(md);
+
+  it("目次が本文のH3より前、元mdの並び順どおりに来る", () => {
+    expect(parsed.sections.map((s) => s.heading)).toEqual(["目次", "結論", "次の見出し"]);
+  });
+
+  it("目次の内容(番号付きリスト)がそのまま入る", () => {
+    const toc = parsed.sections.find((s) => s.heading === "目次");
+    expect(toc?.content).toBe("1. 結論\n2. まとめ");
+    expect(toc?.level).toBe(2);
+  });
+});
+
 describe("mdImport: 汎用形式", () => {
   const parsed = parseMarkdownArticle(GENERIC_MD);
 

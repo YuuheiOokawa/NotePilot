@@ -189,24 +189,28 @@ export function parseMarkdownArticle(md: string, fileName?: string): ParsedMdArt
     summary = meta.has("summary") ? blockText(meta.get("summary")!.block) : "";
     cta = meta.has("cta") ? blockText(meta.get("cta")!.block) : "";
 
-    // 本文: H3小見出しを1つずつセクションにする
-    if (meta.has("body")) {
-      const { block, index } = meta.get("body")!;
-      const intro = blockText(block);
-      if (intro) {
-        sections.push({ heading: "はじめに", level: 3, content: intro, isPaid: block.isPaid });
-      }
-      const { children } = collectChildren(blocks, index);
-      for (const c of children) {
-        sections.push({ heading: c.heading, level: c.level, content: blockText(c), isPaid: c.isPaid });
-      }
-    }
-
-    // メタ見出し以外のH2は追加セクションとして取り込む
+    // H2を先頭から順に走査し、元mdの並び順どおりにセクションを組み立てる。
+    // 「本文」は中のH3/H4小見出しを1つずつセクションに展開し、それ以外の
+    // メタ見出しでないH2(目次・有料部の位置づけ等)はfoldSectionで1セクションにする。
+    // (以前は「本文」を先にすべて処理し、他のH2を後からまとめて末尾に追加していたため、
+    //  本文より前に置かれた「## 目次」等が記事の途中〜末尾に押し出されてしまっていた)
     const metaIndexes = new Set(Array.from(meta.values(), (v) => v.index));
     for (let i = 0; i < blocks.length; i++) {
       const b = blocks[i];
-      if (b.level !== 2 || metaIndexes.has(i)) continue;
+      if (b.level !== 2) continue;
+      const key = META_MAP[normalizeHeading(b.heading)];
+      if (key === "body") {
+        const intro = blockText(b);
+        if (intro) {
+          sections.push({ heading: "はじめに", level: 3, content: intro, isPaid: b.isPaid });
+        }
+        const { children } = collectChildren(blocks, i);
+        for (const c of children) {
+          sections.push({ heading: c.heading, level: c.level, content: blockText(c), isPaid: c.isPaid });
+        }
+        continue;
+      }
+      if (metaIndexes.has(i)) continue; // title/lead/summary/cta等、他のフィールドで扱い済み
       const { children } = collectChildren(blocks, i);
       const folded = foldSection(b, children);
       if (folded.content) sections.push(folded);
