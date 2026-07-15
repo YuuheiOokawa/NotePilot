@@ -37,8 +37,16 @@ function formatContent(text: string): string {
   return normalizeBlankLines(convertMarkdownTablesForNote(text));
 }
 
+// 「目次」セクションは、noteの本物の目次機能(貼り付け後に「＋→目次」で挿入する
+// ウィジェット)とは別物のため、コピー用テキストからは除外する。
+// アプリ内プレビュー(ReadableBody)では全体像を把握できるよう引き続き表示する。
+function isTocSection(heading: string): boolean {
+  return heading.trim() === "目次";
+}
+
 function sectionText(sections: Section[]): string {
   return sections
+    .filter((s) => !isTocSection(s.heading))
     .map((s) => `${formatHeading(s.heading, s.level)}\n\n${formatContent(s.content)}`)
     .join("\n\n\n");
 }
