@@ -140,6 +140,7 @@ CREATE TABLE "article_sections" (
     "article_id" TEXT NOT NULL,
     "order_index" INTEGER NOT NULL,
     "heading" TEXT NOT NULL,
+    "level" INTEGER NOT NULL DEFAULT 2,
     "content" TEXT NOT NULL,
     "is_paid" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

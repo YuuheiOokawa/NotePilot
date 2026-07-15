@@ -35,6 +35,21 @@ function renderTableAsList(headers: string[], rows: string[][]): string[] {
   );
 }
 
+// セクションの見出しレベル(2=##, 3=###, 4=####)をもとに、Markdown見出し記法を復元する。
+// DBにはheadingを見出し記号なしのプレーンテキストで保存しているため、コピー用テキストを
+// 組み立てる際にここで付け直す。「#」が付いていないと、noteに貼り付けたときに見出しとして
+// 認識されず、本文と同じ大きさのただの文章になってしまう。
+export function formatHeading(heading: string, level: number | null | undefined): string {
+  const hashes = "#".repeat(Math.min(Math.max(level ?? 2, 1), 6));
+  return `${hashes} ${heading}`;
+}
+
+// mdの書き手によって空行の数にばらつきが出やすいため、3行以上連続する空行は
+// 1行の空行(段落間の標準的な間隔)に揃える。note貼り付け後に間延びして見えるのを防ぐ。
+export function normalizeBlankLines(text: string): string {
+  return text.replace(/\n{3,}/g, "\n\n");
+}
+
 export function convertMarkdownTablesForNote(text: string): string {
   if (!text.includes("|")) return text; // 早期リターン(パイプを含まない大半のテキストで走査を省略)
 

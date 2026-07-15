@@ -30,6 +30,8 @@ export interface ArticleRequest {
 
 export interface GeneratedSection {
   heading: string;
+  // 元mdでの見出しレベル(2=##, 3=###, 4=####)。省略時は2(##)として扱う。
+  level?: number;
   content: string;
   isPaid: boolean;
 }

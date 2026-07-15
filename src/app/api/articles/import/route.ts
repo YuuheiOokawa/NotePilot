@@ -77,6 +77,7 @@ export async function POST(req: Request) {
           create: parsed.sections.map((s, i) => ({
             orderIndex: i,
             heading: s.heading,
+            level: s.level ?? 2,
             content: s.content,
             isPaid: isPaid ? s.isPaid : false,
           })),

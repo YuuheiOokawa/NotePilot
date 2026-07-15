@@ -6,10 +6,11 @@ import Header from "@/components/Header";
 import CopyButton from "@/components/CopyButton";
 import StatusBadge from "@/components/StatusBadge";
 import { toast } from "@/components/Toast";
-import { convertMarkdownTablesForNote } from "@/lib/noteFormat";
+import { convertMarkdownTablesForNote, formatHeading, normalizeBlankLines } from "@/lib/noteFormat";
 
 interface Section {
   heading: string;
+  level?: number;
   content: string;
   isPaid: boolean;
 }
@@ -30,15 +31,57 @@ interface Article {
 
 // noteはMarkdownのテーブル記法(| a | b |)をサポートしないため、コピー用テキストを
 // 組み立てる際に箇条書き形式へ変換する(DB上の元原稿・編集画面の表示は変更しない)。
+// 見出しは「#」を付け直してnote貼り付け後も見出しとして認識されるようにし、
+// 3行以上の空行は1行に揃えて間延びを防ぐ。
+function formatContent(text: string): string {
+  return normalizeBlankLines(convertMarkdownTablesForNote(text));
+}
+
 function sectionText(sections: Section[]): string {
   return sections
-    .map((s) => `${s.heading}\n\n${convertMarkdownTablesForNote(s.content)}`)
+    .map((s) => `${formatHeading(s.heading, s.level)}\n\n${formatContent(s.content)}`)
     .join("\n\n\n");
 }
 
 interface SnsVariant {
   label: string;
   text: string;
+}
+
+// 見出しレベルに応じて文字の大きさ・太さを変え、読者が実際にnoteで読む見た目に近い
+// 階層感をプレビュー画面上でも再現する(以前は全文を等幅フォントの1枚のプレーンテキストで
+// 表示しており、見出しと本文の区別がつきにくかった)。
+function HeadingLine({ text, level }: { text: string; level: number }) {
+  const cls =
+    level <= 2
+      ? "text-[17px] font-bold text-gray-900"
+      : level === 3
+        ? "text-[16px] font-bold text-gray-800"
+        : "text-[15px] font-semibold text-gray-600";
+  return <p className={`${cls} leading-snug`}>{text}</p>;
+}
+
+function BodyText({ text }: { text: string }) {
+  if (!text) return null;
+  return (
+    <p className="whitespace-pre-wrap break-words text-[15px] leading-[1.9] text-gray-700">
+      {formatContent(text)}
+    </p>
+  );
+}
+
+function ReadableBody({ lead, sections }: { lead?: string; sections: Section[] }) {
+  return (
+    <div className="space-y-5">
+      <BodyText text={lead ?? ""} />
+      {sections.map((s, i) => (
+        <div key={i} className="space-y-2">
+          <HeadingLine text={s.heading} level={s.level ?? 2} />
+          <BodyText text={s.content} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function PreviewPage() {
@@ -101,10 +144,10 @@ export default function PreviewPage() {
 
   const freeSections = article.sections.filter((s) => !s.isPaid);
   const paidSections = article.sections.filter((s) => s.isPaid);
-  const tail = `${convertMarkdownTablesForNote(article.summary)}\n\n${article.cta}`;
+  const tail = `${formatContent(article.summary)}\n\n${article.cta}`;
 
   const freeBody =
-    `${convertMarkdownTablesForNote(article.lead)}\n\n\n${sectionText(freeSections)}` +
+    `${formatContent(article.lead)}\n\n\n${sectionText(freeSections)}` +
     (paidSections.length === 0 ? `\n\n\n${tail}` : "");
   const paidBody = paidSections.length > 0 ? `${sectionText(paidSections)}\n\n\n${tail}` : "";
   const fullBody = paidSections.length > 0 ? `${freeBody}\n\n\n${paidBody}` : freeBody;
@@ -143,9 +186,13 @@ export default function PreviewPage() {
             </h2>
             <CopyButton text={freeBody} label="コピー" onCopied={recordCopy} />
           </div>
-          <pre className="whitespace-pre-wrap break-words font-sans text-xs leading-relaxed text-gray-700">
-            {freeBody}
-          </pre>
+          <ReadableBody lead={article.lead} sections={freeSections} />
+          {paidSections.length === 0 && (
+            <div className="space-y-3 border-t border-gray-100 pt-3">
+              <BodyText text={article.summary} />
+              <BodyText text={article.cta} />
+            </div>
+          )}
         </div>
 
         {/* 有料境界と有料部分 */}
@@ -163,9 +210,11 @@ export default function PreviewPage() {
                 <h2 className="text-xs font-bold text-amber-700">本文（有料部分）</h2>
                 <CopyButton text={paidBody} label="コピー" onCopied={recordCopy} />
               </div>
-              <pre className="whitespace-pre-wrap break-words font-sans text-xs leading-relaxed text-gray-700">
-                {paidBody}
-              </pre>
+              <ReadableBody sections={paidSections} />
+              <div className="space-y-3 border-t border-amber-100 pt-3">
+                <BodyText text={article.summary} />
+                <BodyText text={article.cta} />
+              </div>
             </div>
           </>
         )}

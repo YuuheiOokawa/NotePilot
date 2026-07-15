@@ -282,7 +282,7 @@ describe("mdImport: フォールバック", () => {
     const parsed = parseMarkdownArticle("ただの文章です。\n2行目。", "02_メモ.md");
     expect(parsed.title).toBe("メモ");
     expect(parsed.sections).toEqual([
-      { heading: "本文", content: "ただの文章です。\n2行目。", isPaid: false },
+      { heading: "本文", level: 2, content: "ただの文章です。\n2行目。", isPaid: false },
     ]);
     expect(parsed.warnings.length).toBeGreaterThan(0);
   });

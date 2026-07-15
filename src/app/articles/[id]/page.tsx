@@ -12,6 +12,7 @@ import type { CheckStatus, ReadinessStatus } from "@/lib/review";
 
 interface Section {
   heading: string;
+  level?: number;
   content: string;
   isPaid: boolean;
 }
@@ -316,7 +317,27 @@ export default function ArticleDetailPage() {
           {article.sections.map((s, i) => (
             <div key={i} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
               <div className="mb-2 flex items-center justify-between">
-                <label className="text-[10px] font-bold text-gray-400">セクション {i + 1}</label>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-bold text-gray-400">セクション {i + 1}</label>
+                  <div className="flex overflow-hidden rounded border border-gray-200">
+                    {[2, 3, 4].map((lv) => (
+                      <button
+                        key={lv}
+                        type="button"
+                        title={`見出しレベル H${lv}(コピー時に${"#".repeat(lv)}になります)`}
+                        className={`px-1.5 py-0.5 text-[10px] font-bold ${
+                          (s.level ?? 2) === lv
+                            ? "bg-note text-white"
+                            : "bg-white text-gray-400"
+                        }`}
+                        disabled={!editable}
+                        onClick={() => updateSection(i, { level: lv })}
+                      >
+                        H{lv}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {article.articleType === "paid" && (
                   <button
                     className={`rounded px-2 py-0.5 text-[10px] font-bold ${

@@ -105,9 +105,10 @@ function collectChildren(blocks: RawBlock[], i: number): { children: RawBlock[];
 // H2本文+H3小見出しを1セクションの本文に畳み込む(汎用形式・未知の見出し用)
 function foldSection(block: RawBlock, children: RawBlock[]): GeneratedSection {
   const parts = [blockText(block)];
-  for (const c of children) parts.push(`### ${c.heading}\n${blockText(c)}`);
+  for (const c of children) parts.push(`${"#".repeat(c.level)} ${c.heading}\n${blockText(c)}`);
   return {
     heading: block.heading,
+    level: block.level,
     content: parts.filter(Boolean).join("\n\n"),
     isPaid: block.isPaid || (children.length > 0 && children.every((c) => c.isPaid)),
   };
@@ -192,10 +193,12 @@ export function parseMarkdownArticle(md: string, fileName?: string): ParsedMdArt
     if (meta.has("body")) {
       const { block, index } = meta.get("body")!;
       const intro = blockText(block);
-      if (intro) sections.push({ heading: "はじめに", content: intro, isPaid: block.isPaid });
+      if (intro) {
+        sections.push({ heading: "はじめに", level: 3, content: intro, isPaid: block.isPaid });
+      }
       const { children } = collectChildren(blocks, index);
       for (const c of children) {
-        sections.push({ heading: c.heading, content: blockText(c), isPaid: c.isPaid });
+        sections.push({ heading: c.heading, level: c.level, content: blockText(c), isPaid: c.isPaid });
       }
     }
 
@@ -244,7 +247,7 @@ export function parseMarkdownArticle(md: string, fileName?: string): ParsedMdArt
 
   // 見出しが1つもないmd: 全文を1セクションとして取り込む
   if (sections.length === 0 && lead) {
-    sections.push({ heading: "本文", content: lead, isPaid: false });
+    sections.push({ heading: "本文", level: 2, content: lead, isPaid: false });
     lead = "";
     warnings.push("見出しが見つからなかったため、全文を1つのセクションとして取り込みました。");
   }

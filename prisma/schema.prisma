@@ -214,6 +214,9 @@ model ArticleSection {
   articleId  String   @map("article_id")
   orderIndex Int      @map("order_index")
   heading    String
+  // 元mdでの見出しレベル(2=##, 3=###, 4=####)。コピー用テキスト生成時に
+  // 「#」の数として復元し、note貼り付け後も見出しとして認識されるようにする。
+  level      Int      @default(2)
   content    String
   isPaid     Boolean  @default(false) @map("is_paid")
   createdAt  DateTime @default(now()) @map("created_at")

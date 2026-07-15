@@ -1,5 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { convertMarkdownTablesForNote } from "./noteFormat";
+import { convertMarkdownTablesForNote, formatHeading, normalizeBlankLines } from "./noteFormat";
+
+describe("formatHeading", () => {
+  it("level2は##を付与する", () => {
+    expect(formatHeading("導入文", 2)).toBe("## 導入文");
+  });
+
+  it("level3は###、level4は####を付与する", () => {
+    expect(formatHeading("小見出し", 3)).toBe("### 小見出し");
+    expect(formatHeading("T-01|要件定義", 4)).toBe("#### T-01|要件定義");
+  });
+
+  it("levelがnull/undefinedの場合は2として扱う", () => {
+    expect(formatHeading("見出し", null)).toBe("## 見出し");
+    expect(formatHeading("見出し", undefined)).toBe("## 見出し");
+  });
+});
+
+describe("normalizeBlankLines", () => {
+  it("3行以上連続する空行を1行に揃える", () => {
+    expect(normalizeBlankLines("A\n\n\n\nB")).toBe("A\n\nB");
+  });
+
+  it("1行・2行の空行はそのまま保つ", () => {
+    expect(normalizeBlankLines("A\nB\n\nC")).toBe("A\nB\n\nC");
+  });
+});
 
 describe("convertMarkdownTablesForNote", () => {
   it("テーブルを含まないテキストはそのまま返す", () => {

@@ -53,8 +53,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     data.isPaid = body.articleType === "paid";
   }
 
-  const sections: { heading: string; content: string; isPaid: boolean }[] | undefined =
-    body.sections;
+  const sections:
+    | { heading: string; level?: number; content: string; isPaid: boolean }[]
+    | undefined = body.sections;
 
   // 本文・タイトル等の内容が変更されたら、品質チェック結果を無効化する
   // （記事作成・修正後は必ず再チェックさせるための設計）
@@ -76,6 +77,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
           articleId: params.id,
           orderIndex: i,
           heading: s.heading ?? "",
+          level: s.level ?? 2,
           content: s.content ?? "",
           isPaid: !!s.isPaid,
         })),
